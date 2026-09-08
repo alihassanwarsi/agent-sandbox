@@ -24,8 +24,14 @@ def reflection(state: AgentState, llm_call: Callable[[str], str] = call_llm) -> 
             "I'm not able to complete that request: "
             f"{state.permission_error}"
         )
-
         return state.model_copy(update={"final_response": denial_message})
+
+    if state.confirmation_error is not None:
+        confirmation_message = (
+            "Before I can do that, I need you to confirm: "
+            f"{state.confirmation_error}"
+        )
+        return state.model_copy(update={"final_response": confirmation_message})
 
     if state.tool_result is not None:
         prompt = _build_result_prompt(state.user_message, state.tool_result)

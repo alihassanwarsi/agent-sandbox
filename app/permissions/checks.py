@@ -11,6 +11,9 @@ MAX_RISK_BY_ROLE: dict[UserRole, RiskLevel] = {
 class PermissionDenied(Exception):
     """Raised when a role is not allowed to use a given tool."""
 
+class ConfirmationRequired(Exception):
+    """Raised when a MEDIUM-risk tool is called without confirmation."""
+
 def check_permission(role: UserRole, tool_name: str) -> None:
 
 
@@ -24,4 +27,15 @@ def check_permission(role: UserRole, tool_name: str) -> None:
         raise PermissionDenied(
             f"Role '{role.name}' is not permitted to use tool '{tool_name}'"
             f"(tool risk: {tool_risk.name}, role's max allowed risk: {allowed_risk.name})."
+        )
+
+def check_confirmation(tool_name: str, confirmed: bool) -> None:
+    """ Check whether a MEDIUM-risk tool has been confirmed before running."""
+
+    risk = TOOL_RISK_LEVELS[tool_name]
+
+    if risk == RiskLevel.MEDIUM and not confirmed:
+        raise ConfirmationRequired(
+            f"Tool '{tool_name}' requires confirmation before it can run. "
+            f"Resend the request with confirmation."
         )

@@ -17,4 +17,8 @@ class AgentState(BaseModel):
 
     permission_error: Optional[str] = None
 
+    confirmed: bool = False
+
+    confirmation_error: Optional[str] = None
+    
     final_response: Optional[str] = None

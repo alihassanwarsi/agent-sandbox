@@ -45,3 +45,11 @@ def test_permission_error_takes_priority_over_tool_result():
     result = reflection(state, llm_call=fake_llm_explains_result)
 
     assert "not able to complete" in result.final_response
+
+def test_reflection_returns_message_when_confirmation_needed():
+    state = intake("Read hello.txt", UserRole.ANALYST)
+    state = state.model_copy(update={"confirmation_error": "Tool 'file_reader' requires confirmation."})
+
+    result = reflection(state, llm_call=fake_llm_explains_result)
+
+    assert "confirm" in result.final_response.lower()

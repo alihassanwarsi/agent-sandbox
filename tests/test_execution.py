@@ -45,3 +45,17 @@ def test_execution_still_blocks_at_registry_level_as_backup():
 
     with pytest.raises(PermissionDenied):
         execution(state, registry)
+
+def test_execution_sets_confirmation_error_for_unconfirmed_medium_risk_tool():
+    from app.tools.setup import build_default_registry
+    from app.agent.nodes.intake import intake
+    from app.permissions.roles import UserRole
+
+    registry = build_default_registry()
+    state = intake("Read hello.txt", UserRole.ANALYST)
+    state = state.model_copy(update={"selected_tool": "file_reader", "tool_input": {"filename": "hello.txt"}})
+
+    result = execution(state, registry)
+
+    assert result.tool_result is None
+    assert result.confirmation_error is not None

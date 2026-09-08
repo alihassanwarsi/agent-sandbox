@@ -1,6 +1,6 @@
 from typing import Callable, Type
 from pydantic import BaseModel
-from app.permissions.checks import check_permission
+from app.permissions.checks import check_confirmation, check_permission
 from app.permissions.roles import UserRole
 
 class Tool(BaseModel):
@@ -32,10 +32,11 @@ class ToolRegistry:
     def list_tools(self) -> list[Tool]:
         return list(self._tools.values())
 
-    def run(self, tool_name: str, role: UserRole, input_data: BaseModel) -> object:
+    def run(self, tool_name: str, role: UserRole, input_data: BaseModel, confirmed: bool = False) -> object:
         """Run a tool by name, but only after checking that 
         the given role is permitted to use it."""
 
         check_permission(role, tool_name)
+        check_confirmation(tool_name, confirmed)
         tool = self.get(tool_name)
         return tool.handler(input_data)

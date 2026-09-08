@@ -1,7 +1,7 @@
 import pytest
 from pydantic import BaseModel
 from app.tools.registry import Tool, ToolRegistry
-from app.permissions.checks import PermissionDenied
+from app.permissions.checks import PermissionDenied, ConfirmationRequired
 from app.permissions.roles import UserRole
 
 class DummyInput(BaseModel):
@@ -76,3 +76,28 @@ def test_run_blocks_tool_when_role_is_not_permitted():
             UserRole.VIEWER,
             registry.get("create_ticket").input_schema(title="x", description="y"),
         )
+
+def test_run_blocks_medium_risk_tool_without_confirmation():
+    from app.tools.setup import build_default_registry
+
+    registry = build_default_registry()
+
+    with pytest.raises(ConfirmationRequired):
+        registry.run(
+            "file_reader",
+            UserRole.ANALYST,
+            registry.get("file_reader").input_schema(filename="hello.txt"),
+        )
+
+def test_run_executes_medium_risk_tool_when_confirmed():
+    from app.tools.setup import build_default_registry
+
+    registry = build_default_registry()
+
+    result = registry.run(
+        "file_reader",
+        UserRole.ANALYST,
+        registry.get("file_reader").input_schema(filename="hello.txt"),
+        confirmed=True,
+    )
+    assert "hello" in result.lower()
