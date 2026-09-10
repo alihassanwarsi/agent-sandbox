@@ -7,6 +7,24 @@ from app.agent.nodes.reflection import reflection
 from app.agent.state import AgentState
 from app.permissions.roles import UserRole
 from app.tools.registry import ToolRegistry
+from app.agent.nodes.approval_wait import approval_wait
+from app.permissions.risk import RiskLevel, TOOL_RISK_LEVELS
+
+def _route_after_permission_check(state: AgentState) -> str:
+    """Decide the next step after permission check."""
+
+    if state.permission_error is not None:
+        return "reflection"
+
+    if state.selected_tool is None:
+        return "execution"
+
+    risk = TOOL_RISK_LEVELS[state.selected_tool]
+
+    if risk == RiskLevel.HIGH:
+        return "approval_wait"
+
+    return "execution"
 
 def build_graph(registry: ToolRegistry):
     """Build and compile the LangGraph pipeline, bound to the given tool registry."""
@@ -22,6 +40,9 @@ def build_graph(registry: ToolRegistry):
 
     def reflection_node(state: AgentState) -> dict:
         return reflection(state).model_dump()
+
+    def approval_wait_node(state: AgentState) -> dict:
+        return approval_wait(state).model_dump()
     
     graph = StateGraph(AgentState)
 
@@ -29,11 +50,19 @@ def build_graph(registry: ToolRegistry):
     graph.add_node("permission_check", permission_check_node)
     graph.add_node("execution", execution_node)
     graph.add_node("reflection", reflection_node)
+    graph.add_node("approval_wait", approval_wait_node)
 
     graph.add_edge(START, "plan")
     graph.add_edge("plan", "permission_check")
-    graph.add_edge("permission_check", "execution")
+    graph.add_conditional_edges(
+        "permission_check", _route_after_permission_check, {
+            "reflection": "reflection",
+            "execution": "execution",
+            "approval_wait": "approval_wait"
+        }
+    )
     graph.add_edge("execution", "reflection")
+    graph.add_edge("approval_wait", END)
     graph.add_edge("reflection", END)
 
     return graph.compile()

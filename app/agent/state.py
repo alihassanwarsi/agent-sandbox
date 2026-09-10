@@ -20,5 +20,7 @@ class AgentState(BaseModel):
     confirmed: bool = False
 
     confirmation_error: Optional[str] = None
+
+    awaiting_approval: bool = False
     
     final_response: Optional[str] = None
