@@ -7,14 +7,19 @@ from app.agent.nodes.permission_check import permission_check
 from app.agent.nodes.execution import execution
 from app.agent.nodes.reflection import reflection
 from app.agent.state import AgentState
+from app.agent.llm import call_llm
 from app.permissions.roles import UserRole
 from app.tools.registry import ToolRegistry
 from app.agent.nodes.approval_wait import approval_wait
 from app.permissions.risk import RiskLevel, TOOL_RISK_LEVELS
 from app.approval.queue import ApprovalQueue
-from app.agent.llm import call_llm
+from app.observability.tracing import build_tracer_provider
+from app.observability.trace_node import traced_node
 
 _checkpointer = MemorySaver()
+
+_tracer_provider = build_tracer_provider()
+_tracer = _tracer_provider.get_tracer("agent_sandbox")
 
 def _route_after_permission_check(state: AgentState) -> str:
     """Decide the next step after permission check."""
@@ -60,11 +65,11 @@ def build_graph(registry: ToolRegistry, queue: ApprovalQueue, llm_call=call_llm)
 
     graph = StateGraph(AgentState)
 
-    graph.add_node("plan", plan_node)
-    graph.add_node("permission_check", permission_check_node)
-    graph.add_node("execution", execution_node)
-    graph.add_node("reflection", reflection_node)
-    graph.add_node("approval_wait", approval_wait_node)
+    graph.add_node("plan", traced_node(_tracer, "plan", plan_node))
+    graph.add_node("permission_check", traced_node(_tracer, "permission_check", permission_check_node))
+    graph.add_node("execution", traced_node(_tracer, "execution", execution_node))
+    graph.add_node("reflection", traced_node(_tracer, "reflection", reflection_node))
+    graph.add_node("approval_wait", traced_node(_tracer, "approval_wait", approval_wait_node))
 
     graph.add_edge(START, "plan")
     graph.add_edge("plan", "permission_check")
