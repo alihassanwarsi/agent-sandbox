@@ -15,10 +15,13 @@ from app.permissions.risk import RiskLevel, TOOL_RISK_LEVELS
 from app.approval.queue import ApprovalQueue
 from app.observability.tracing import build_tracer_provider
 from app.observability.trace_node import traced_node
+from app.observability.trace_store import InMemoryTraceStore
+from opentelemetry.sdk.trace.export import ConsoleSpanExporter
 
 _checkpointer = MemorySaver()
 
-_tracer_provider = build_tracer_provider()
+_trace_store = InMemoryTraceStore()
+_tracer_provider = build_tracer_provider(exporters=[ConsoleSpanExporter(), _trace_store])
 _tracer = _tracer_provider.get_tracer("agent_sandbox")
 
 def _route_after_permission_check(state: AgentState) -> str:

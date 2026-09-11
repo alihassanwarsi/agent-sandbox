@@ -6,7 +6,7 @@ from app.observability.trace_node import traced_node
 
 def test_traced_node_records_a_span_with_the_correct_name():
     exporter = InMemorySpanExporter()
-    provider = build_tracer_provider(exporter=exporter)
+    provider = build_tracer_provider(exporters=[exporter])
     tracer = provider.get_tracer("test")
 
     def dummy_node(state):
@@ -22,7 +22,7 @@ def test_traced_node_records_a_span_with_the_correct_name():
 
 def test_traced_node_records_selected_tool_attribute():
     exporter = InMemorySpanExporter()
-    provider = build_tracer_provider(exporter=exporter)
+    provider = build_tracer_provider(exporters=[exporter])
     tracer = provider.get_tracer("test")
 
     def dummy_node(state):
@@ -37,7 +37,7 @@ def test_traced_node_records_selected_tool_attribute():
 
 def test_traced_node_records_blocked_attribute_when_permission_denied():
     exporter = InMemorySpanExporter()
-    provider = build_tracer_provider(exporter=exporter)
+    provider = build_tracer_provider(exporters=[exporter])
     tracer = provider.get_tracer("test")
 
     def dummy_node(state):
@@ -54,7 +54,7 @@ def test_traced_node_records_exception_and_reraises():
     import pytest
 
     exporter = InMemorySpanExporter()
-    provider = build_tracer_provider(exporter=exporter)
+    provider = build_tracer_provider(exporters=[exporter])
     tracer = provider.get_tracer("test")
 
     def failing_node(state):

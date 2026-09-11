@@ -1,12 +1,13 @@
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor, ConsoleSpanExporter
 
-def build_tracer_provider(exporter=None) -> TracerProvider:
-    """Build a TracerProvider using the given exporter (defaults to printing to the console)."""
+def build_tracer_provider(exporters=None) -> TracerProvider:
+    """Build a TracerProvider using the given exporters (defaults to printing to the console)."""
 
-    if exporter is None:
-        exporter = ConsoleSpanExporter()
+    if exporters is None:
+        exporters = [ConsoleSpanExporter()]
 
     provider = TracerProvider()
-    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    for exporter in exporters:
+        provider.add_span_processor(SimpleSpanProcessor(exporter))
     return provider
