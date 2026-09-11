@@ -94,28 +94,37 @@ def build_graph(registry: ToolRegistry, queue: ApprovalQueue, llm_call=call_llm)
 def run_agent(user_message: str, role: UserRole, registry: ToolRegistry, queue: ApprovalQueue, thread_id: str, llm_call=call_llm) -> dict:
     """Run the full pipeline for one request, returning the final AgentState."""
 
-    initial_state = intake(user_message, role)
-    compiled_graph = build_graph(registry, queue, llm_call=llm_call)
+    with _tracer.start_as_current_span("agent_run") as run_span:
+        run_span.set_attribute("thread_id", thread_id)
+        run_span.set_attribute("role", role.name)
 
-    config = {"configurable": {"thread_id": thread_id}}
-    result = compiled_graph.invoke(initial_state, config=config)
+        initial_state = intake(user_message, role)
+        compiled_graph = build_graph(registry, queue, llm_call=llm_call)
 
-    if "__interrupt__" in result:
-        interrupt_data = result["__interrupt__"][0].value
-        return {"status": "awaiting_approval", "approval_request_id": interrupt_data["approval_request_id"]}
+        config = {"configurable": {"thread_id": thread_id}}
+        result = compiled_graph.invoke(initial_state, config=config)
 
-    return {"status": "completed", "state": AgentState(**result)}
+        if "__interrupt__" in result:
+            interrupt_data = result["__interrupt__"][0].value
+            run_span.set_attribute("awaiting_approval", True)
+            return {"status": "awaiting_approval", "approval_request_id": interrupt_data["approval_request_id"]}
+
+        return {"status": "completed", "state": AgentState(**result)}
 
 def resume_agent(thread_id: str, decision: dict, registry: ToolRegistry, queue: ApprovalQueue, llm_call=call_llm) -> dict:
     """Resume a paused run after a human has made a decision."""
 
-    compiled_graph = build_graph(registry, queue, llm_call=llm_call)
-    config = {"configurable": {"thread_id": thread_id}}
+    with _tracer.start_as_current_span("agent_resume") as run_span:
+        run_span.set_attribute("thread_id", thread_id)
+        run_span.set_attribute("decision_outcome", decision.get("outcome", "unknown"))
 
-    result = compiled_graph.invoke(Command(resume=decision), config=config)
+        compiled_graph = build_graph(registry, queue, llm_call=llm_call)
+        config = {"configurable": {"thread_id": thread_id}}
 
-    if "__interrupt__" in result:
-        interrupt_data = result["__interrupt__"][0].value
-        return {"status": "awaiting_approval", "approval_request_id": interrupt_data["approval_request_id"]}
+        result = compiled_graph.invoke(Command(resume=decision), config=config)
 
-    return {"status": "completed", "state": AgentState(**result)}
+        if "__interrupt__" in result:
+            interrupt_data = result["__interrupt__"][0].value
+            return {"status": "awaiting_approval", "approval_request_id": interrupt_data["approval_request_id"]}
+
+        return {"status": "completed", "state": AgentState(**result)}
