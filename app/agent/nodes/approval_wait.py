@@ -36,7 +36,7 @@ def approval_wait(state: AgentState, queue: ApprovalQueue) -> AgentState:
             }
         )
 
-    final_input = decision.get("tool_input", state.tool_input)
+    final_input = decision.get("tool_input") or state.tool_input
 
     return state.model_copy(
         update={
