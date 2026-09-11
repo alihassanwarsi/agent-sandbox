@@ -1,4 +1,6 @@
 from langgraph.graph import START, END, StateGraph
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.types import Command
 from app.agent.nodes.intake import intake
 from app.agent.nodes.plan import plan
 from app.agent.nodes.permission_check import permission_check
@@ -9,6 +11,10 @@ from app.permissions.roles import UserRole
 from app.tools.registry import ToolRegistry
 from app.agent.nodes.approval_wait import approval_wait
 from app.permissions.risk import RiskLevel, TOOL_RISK_LEVELS
+from app.approval.queue import ApprovalQueue
+from app.agent.llm import call_llm
+
+_checkpointer = MemorySaver()
 
 def _route_after_permission_check(state: AgentState) -> str:
     """Decide the next step after permission check."""
@@ -26,11 +32,19 @@ def _route_after_permission_check(state: AgentState) -> str:
 
     return "execution"
 
-def build_graph(registry: ToolRegistry):
-    """Build and compile the LangGraph pipeline, bound to the given tool registry."""
+def _route_after_approval_wait(state: AgentState) -> str:
+    """Route to Reflection if rejected, otherwise to Execution."""
+
+    if state.permission_error is not None:
+        return "reflection"
+
+    return "execution"
+
+def build_graph(registry: ToolRegistry, queue: ApprovalQueue, llm_call=call_llm):
+    """Build and compile the LangGraph pipeline, bound to the given tool registry and approval queue."""
 
     def plan_node(state: AgentState) -> dict:
-        return plan(state, registry).model_dump()
+        return plan(state, registry, llm_call=llm_call).model_dump()
 
     def permission_check_node(state: AgentState) -> dict:
         return permission_check(state).model_dump()
@@ -39,11 +53,11 @@ def build_graph(registry: ToolRegistry):
         return execution(state, registry).model_dump()
 
     def reflection_node(state: AgentState) -> dict:
-        return reflection(state).model_dump()
+        return reflection(state, llm_call=llm_call).model_dump()
 
     def approval_wait_node(state: AgentState) -> dict:
-        return approval_wait(state).model_dump()
-    
+        return approval_wait(state, queue).model_dump()
+
     graph = StateGraph(AgentState)
 
     graph.add_node("plan", plan_node)
@@ -62,17 +76,41 @@ def build_graph(registry: ToolRegistry):
         }
     )
     graph.add_edge("execution", "reflection")
-    graph.add_edge("approval_wait", END)
+    graph.add_conditional_edges(
+        "approval_wait", _route_after_approval_wait, {
+            "reflection": "reflection",
+            "execution": "execution"
+        }
+    )
     graph.add_edge("reflection", END)
 
-    return graph.compile()
+    return graph.compile(checkpointer=_checkpointer)
 
-def run_agent(user_message: str, role: UserRole, registry: ToolRegistry) -> AgentState:
+def run_agent(user_message: str, role: UserRole, registry: ToolRegistry, queue: ApprovalQueue, thread_id: str, llm_call=call_llm) -> dict:
     """Run the full pipeline for one request, returning the final AgentState."""
 
     initial_state = intake(user_message, role)
-    compiled_graph = build_graph(registry)
+    compiled_graph = build_graph(registry, queue, llm_call=llm_call)
 
-    result = compiled_graph.invoke(initial_state)
+    config = {"configurable": {"thread_id": thread_id}}
+    result = compiled_graph.invoke(initial_state, config=config)
 
-    return AgentState(**result)
+    if "__interrupt__" in result:
+        interrupt_data = result["__interrupt__"][0].value
+        return {"status": "awaiting_approval", "approval_request_id": interrupt_data["approval_request_id"]}
+
+    return {"status": "completed", "state": AgentState(**result)}
+
+def resume_agent(thread_id: str, decision: dict, registry: ToolRegistry, queue: ApprovalQueue, llm_call=call_llm) -> dict:
+    """Resume a paused run after a human has made a decision."""
+
+    compiled_graph = build_graph(registry, queue, llm_call=llm_call)
+    config = {"configurable": {"thread_id": thread_id}}
+
+    result = compiled_graph.invoke(Command(resume=decision), config=config)
+
+    if "__interrupt__" in result:
+        interrupt_data = result["__interrupt__"][0].value
+        return {"status": "awaiting_approval", "approval_request_id": interrupt_data["approval_request_id"]}
+
+    return {"status": "completed", "state": AgentState(**result)}

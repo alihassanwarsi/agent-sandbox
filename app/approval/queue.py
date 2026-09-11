@@ -1,4 +1,5 @@
 import uuid
+from typing import Optional
 from app.permissions.roles import UserRole
 from app.permissions.risk import RiskLevel
 from app.approval.models import ApprovalRequest, ApprovalStatus
@@ -34,6 +35,19 @@ class ApprovalQueue:
         """Return all requests still waiting for a decision."""
 
         return [req for req in self._requests.values() if req.status == ApprovalStatus.PENDING]
+
+    def find_pending_for(self, tool_name: str, tool_input: dict, role: UserRole) -> Optional[ApprovalRequest]:
+        """Find a matching PENDING request to avoid duplicates on resume."""
+
+        for request in self._requests.values():
+            if (
+                request.status == ApprovalStatus.PENDING
+                and request.tool_name == tool_name
+                and request.tool_input == tool_input
+                and request.role == role
+            ):
+                return request
+        return None
 
     def approve(self, request_id: str, decided_by: str) -> ApprovalRequest:
         """Approve a request"""
