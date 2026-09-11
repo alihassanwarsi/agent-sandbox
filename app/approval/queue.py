@@ -36,6 +36,10 @@ class ApprovalQueue:
 
         return [req for req in self._requests.values() if req.status == ApprovalStatus.PENDING]
 
+    def list_all(self) -> list[ApprovalRequest]:
+        """Return every request ever submitted, regardless of status."""
+        return list(self._requests.values())
+
     def find_pending_for(self, tool_name: str, tool_input: dict, role: UserRole) -> Optional[ApprovalRequest]:
         """Find a matching PENDING request to avoid duplicates on resume."""
 
