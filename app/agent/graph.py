@@ -1,5 +1,6 @@
+import os
 from langgraph.graph import START, END, StateGraph
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.types import Command
 from app.agent.nodes.intake import intake
 from app.agent.nodes.plan import plan
@@ -18,7 +19,9 @@ from app.observability.trace_node import traced_node
 from app.observability.trace_store import InMemoryTraceStore
 from opentelemetry.sdk.trace.export import ConsoleSpanExporter
 
-_checkpointer = MemorySaver()
+_checkpointer_cm = PostgresSaver.from_conn_string(os.environ["DATABASE_URL"])
+_checkpointer = _checkpointer_cm.__enter__()
+_checkpointer.setup()
 
 _trace_store = InMemoryTraceStore()
 _tracer_provider = build_tracer_provider(exporters=[ConsoleSpanExporter(), _trace_store])
