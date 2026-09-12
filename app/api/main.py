@@ -2,7 +2,7 @@ import uuid
 from fastapi import FastAPI, HTTPException
 from app.agent.graph import run_agent, resume_agent
 from app.api.schemas import ApproveRequest, ModifyRequest, RejectRequest, ResumeRequest, RunRequest
-from app.approval.queue import ApprovalQueue
+from app.db.postgres_queue import PostgresApprovalQueue
 from app.observability.analytics import compute_safety_analytics
 from app.observability.trace_viewer import format_trace
 from app.permissions.roles import UserRole
@@ -11,7 +11,7 @@ from app.tools.setup import build_default_registry
 app = FastAPI(title="Permissioned Tool-Using Agent Sandbox")
 
 _registry = build_default_registry()
-_queue = ApprovalQueue()
+_queue = PostgresApprovalQueue()
 
 from app.agent.graph import _trace_store
 
