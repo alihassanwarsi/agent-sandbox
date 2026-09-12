@@ -1,3 +1,4 @@
+import uuid
 from app.agent.graph import build_graph, run_agent, resume_agent
 from app.agent.nodes.intake import intake
 from app.approval.queue import ApprovalQueue
@@ -31,8 +32,9 @@ def test_low_risk_request_completes_immediately():
 
     state = intake("What is 2 + 2?", UserRole.VIEWER)
 
-    compiled = build_graph(registry, queue, llm_call=fake_llm_calculator_choice)
-    result = compiled.invoke(state, config={"configurable": {"thread_id": "test-thread-1"}})
+    thread_id = str(uuid.uuid4())
+    compiled = build_graph(registry, queue, llm_call=fake_llm_calculator_choice, thread_id=thread_id)
+    result = compiled.invoke(state, config={"configurable": {"thread_id": thread_id}})
 
     assert "__interrupt__" not in result
     assert result["tool_result"] == 4
@@ -43,8 +45,9 @@ def test_high_risk_request_pauses_and_submits_to_queue():
 
     state = intake("Create a ticket for a server outage", UserRole.OPERATOR)
 
-    compiled = build_graph(registry, queue, llm_call=fake_llm_ticket_choice)
-    result = compiled.invoke(state, config={"configurable": {"thread_id": "test-thread-2"}})
+    thread_id = str(uuid.uuid4())
+    compiled = build_graph(registry, queue, llm_call=fake_llm_ticket_choice, thread_id=thread_id)
+    result = compiled.invoke(state, config={"configurable": {"thread_id": thread_id}})
 
     assert "__interrupt__" in result
     assert len(queue.list_pending()) == 1
@@ -55,8 +58,8 @@ def test_resume_after_approval_runs_the_tool():
 
     state = intake("Create a ticket for a server outage", UserRole.OPERATOR)
 
-    compiled = build_graph(registry, queue, llm_call=fake_llm_ticket_choice)
-    thread_id = "test-thread-3"
+    thread_id = str(uuid.uuid4())
+    compiled = build_graph(registry, queue, llm_call=fake_llm_ticket_choice, thread_id=thread_id)
     compiled.invoke(state, config={"configurable": {"thread_id": thread_id}})
 
     pending = queue.list_pending()[0]
@@ -79,8 +82,8 @@ def test_resume_after_rejection_does_not_run_the_tool():
 
     state = intake("Create a ticket for a server outage", UserRole.OPERATOR)
 
-    compiled = build_graph(registry, queue, llm_call=fake_llm_ticket_choice)
-    thread_id = "test-thread-4"
+    thread_id = str(uuid.uuid4())
+    compiled = build_graph(registry, queue, llm_call=fake_llm_ticket_choice, thread_id=thread_id)
     compiled.invoke(state, config={"configurable": {"thread_id": thread_id}})
 
     pending = queue.list_pending()[0]

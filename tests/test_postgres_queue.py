@@ -26,6 +26,7 @@ def test_submit_creates_a_pending_row():
         risk_level=RiskLevel.HIGH,
         role=UserRole.OPERATOR,
         reasoning="test",
+        thread_id="test-thread",
     )
 
     assert request.status.value == "pending"
@@ -40,6 +41,7 @@ def test_list_pending_returns_only_pending():
         risk_level=RiskLevel.HIGH,
         role=UserRole.OPERATOR,
         reasoning="test",
+        thread_id="test-thread",
     )
 
     pending = queue.list_pending()
@@ -54,6 +56,7 @@ def test_approve_updates_the_row():
         risk_level=RiskLevel.HIGH,
         role=UserRole.OPERATOR,
         reasoning="test",
+        thread_id="test-thread",
     )
 
     approved = queue.approve(request.id, decided_by="alice")
@@ -70,6 +73,7 @@ def test_reject_updates_the_row():
         risk_level=RiskLevel.HIGH,
         role=UserRole.OPERATOR,
         reasoning="test",
+        thread_id="test-thread",
     )
 
     rejected = queue.reject(request.id, decided_by="alice", reason="no")
@@ -85,6 +89,7 @@ def test_find_pending_for_finds_a_match():
         risk_level=RiskLevel.HIGH,
         role=UserRole.OPERATOR,
         reasoning="test",
+        thread_id="test-thread",
     )
 
     found = queue.find_pending_for("create_ticket", {"title": "x", "description": "y"}, UserRole.OPERATOR)

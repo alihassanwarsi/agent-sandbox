@@ -75,3 +75,39 @@ def api_analytics():
 @app.get("/traces/{trace_id}")
 def api_trace(trace_id: str):
     return {"trace": format_trace(_trace_store, trace_id)}
+
+@app.post("/approvals/{request_id}/approve-and-resume")
+def api_approve_and_resume(request_id: str, request: ApproveRequest):
+    try:
+        approved = _queue.approve(request_id, decided_by=request.decided_by)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Approval request not found.")
+
+    result = resume_agent(approved.thread_id, {"outcome": "approved"}, _registry, _queue)
+    if result["status"] == "completed":
+        return {"status": "completed", "final_response": result["state"].final_response}
+    return {"status": "awaiting_approval", "approval_request_id": result["approval_request_id"]}
+
+@app.post("/approvals/{request_id}/reject-and-resume")
+def api_reject_and_resume(request_id: str, request: RejectRequest):
+    try:
+        rejected = _queue.reject(request_id, decided_by=request.decided_by, reason=request.reason)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Approval request not found.")
+
+    result = resume_agent(rejected.thread_id, {"outcome": "rejected", "reason": request.reason}, _registry, _queue)
+    if result["status"] == "completed":
+        return {"status": "completed", "final_response": result["state"].final_response}
+    return {"status": "awaiting_approval", "approval_request_id": result["approval_request_id"]}
+
+@app.post("/approvals/{request_id}/modify-and-resume")
+def api_modify_and_resume(request_id: str, request: ModifyRequest):
+    try:
+        modified = _queue.modify(request_id, decided_by=request.decided_by, new_tool_input=request.tool_input, reason=request.reason)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Approval request not found.")
+
+    result = resume_agent(modified.thread_id, {"outcome": "modified", "tool_input": request.tool_input}, _registry, _queue)
+    if result["status"] == "completed":
+        return {"status": "completed", "final_response": result["state"].final_response}
+    return {"status": "awaiting_approval", "approval_request_id": result["approval_request_id"]}

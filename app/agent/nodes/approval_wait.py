@@ -4,7 +4,7 @@ from app.approval.queue import ApprovalQueue
 from app.permissions.risk import TOOL_RISK_LEVELS
 
 
-def approval_wait(state: AgentState, queue: ApprovalQueue) -> AgentState:
+def approval_wait(state: AgentState, queue: ApprovalQueue, thread_id: str) -> AgentState:
     """Submit the request for approval (or reuse an existing pending one), then pause."""
 
     tool_input = state.tool_input or {}
@@ -17,6 +17,7 @@ def approval_wait(state: AgentState, queue: ApprovalQueue) -> AgentState:
             risk_level=TOOL_RISK_LEVELS[state.selected_tool],
             role=state.role,
             reasoning=state.plan or "",
+            thread_id=thread_id,
         )
 
     decision = interrupt(

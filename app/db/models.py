@@ -10,10 +10,9 @@ class ApprovalRequestORM(Base):
     tool_input = Column(JSONB, nullable=False)
     risk_level = Column(Integer, nullable=False)
     role = Column(Integer, nullable=False)
+    thread_id = Column(String, nullable=False)
     reasoning = Column(String, nullable=False)
-
     status = Column(String, nullable=False)
-
     decided_by = Column(String, nullable=True)
     decision_reason = Column(String, nullable=True)
     final_tool_input = Column(JSONB, nullable=True)

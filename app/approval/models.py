@@ -20,6 +20,7 @@ class ApprovalRequest(BaseModel):
     tool_input: dict[str, Any]
     risk_level: RiskLevel
     role: UserRole
+    thread_id: str = Field(..., description="The LangGraph run this approval request belongs to.")
     reasoning: str = Field(..., description="The model's reasoning for proposing this action.")
     status: ApprovalStatus = ApprovalStatus.PENDING
 

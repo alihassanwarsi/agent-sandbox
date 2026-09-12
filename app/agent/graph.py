@@ -51,7 +51,7 @@ def _route_after_approval_wait(state: AgentState) -> str:
 
     return "execution"
 
-def build_graph(registry: ToolRegistry, queue: ApprovalQueue, llm_call=call_llm):
+def build_graph(registry: ToolRegistry, queue: ApprovalQueue, llm_call=call_llm, thread_id: str = ""):
     """Build and compile the LangGraph pipeline, bound to the given tool registry and approval queue."""
 
     def plan_node(state: AgentState) -> dict:
@@ -67,7 +67,7 @@ def build_graph(registry: ToolRegistry, queue: ApprovalQueue, llm_call=call_llm)
         return reflection(state, llm_call=llm_call).model_dump()
 
     def approval_wait_node(state: AgentState) -> dict:
-        return approval_wait(state, queue).model_dump()
+        return approval_wait(state, queue, thread_id).model_dump()
 
     graph = StateGraph(AgentState)
 
@@ -105,7 +105,7 @@ def run_agent(user_message: str, role: UserRole, registry: ToolRegistry, queue: 
         run_span.set_attribute("role", role.name)
 
         initial_state = intake(user_message, role)
-        compiled_graph = build_graph(registry, queue, llm_call=llm_call)
+        compiled_graph = build_graph(registry, queue, llm_call=llm_call, thread_id=thread_id)
 
         config = {"configurable": {"thread_id": thread_id}}
         result = compiled_graph.invoke(initial_state, config=config)
@@ -124,7 +124,7 @@ def resume_agent(thread_id: str, decision: dict, registry: ToolRegistry, queue: 
         run_span.set_attribute("thread_id", thread_id)
         run_span.set_attribute("decision_outcome", decision.get("outcome", "unknown"))
 
-        compiled_graph = build_graph(registry, queue, llm_call=llm_call)
+        compiled_graph = build_graph(registry, queue, llm_call=llm_call, thread_id=thread_id)
         config = {"configurable": {"thread_id": thread_id}}
 
         result = compiled_graph.invoke(Command(resume=decision), config=config)

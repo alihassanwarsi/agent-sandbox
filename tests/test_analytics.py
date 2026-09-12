@@ -59,6 +59,7 @@ def test_analytics_counts_approval_queue_outcomes():
         risk_level=RiskLevel.HIGH,
         role=UserRole.OPERATOR,
         reasoning="test",
+        thread_id="test-thread"
     )
     queue.approve(request_one.id, decided_by="alice")
 
@@ -68,6 +69,7 @@ def test_analytics_counts_approval_queue_outcomes():
         risk_level=RiskLevel.HIGH,
         role=UserRole.OPERATOR,
         reasoning="test",
+        thread_id="test-thread"
     )
     queue.reject(request_two.id, decided_by="alice", reason="no")
 
@@ -77,6 +79,7 @@ def test_analytics_counts_approval_queue_outcomes():
         risk_level=RiskLevel.HIGH,
         role=UserRole.OPERATOR,
         reasoning="test",
+        thread_id="test-thread"
     )
 
     analytics = compute_safety_analytics(store, queue)

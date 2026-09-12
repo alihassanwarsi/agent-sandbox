@@ -14,6 +14,7 @@ def _to_domain(row: ApprovalRequestORM) -> ApprovalRequest:
         tool_input=row.tool_input,
         risk_level=RiskLevel(row.risk_level),
         role=UserRole(row.role),
+        thread_id=row.thread_id,
         reasoning=row.reasoning,
         status=ApprovalStatus(row.status),
         decided_by=row.decided_by,
@@ -24,7 +25,7 @@ def _to_domain(row: ApprovalRequestORM) -> ApprovalRequest:
 class PostgresApprovalQueue:
     """Same interface as ApprovalQueue, backed by a real Postgres table."""
 
-    def submit(self, tool_name: str, tool_input: dict, risk_level: RiskLevel, role: UserRole,reasoning: str) -> ApprovalRequest:
+    def submit(self, tool_name: str, tool_input: dict, risk_level: RiskLevel, role: UserRole,reasoning: str, thread_id: str) -> ApprovalRequest:
         session = get_db_session()
         try:
             row = ApprovalRequestORM(
@@ -35,6 +36,7 @@ class PostgresApprovalQueue:
                 role=int(role),
                 reasoning=reasoning,
                 status=ApprovalStatus.PENDING.value,
+                thread_id=thread_id
             )
             session.add(row)
             session.commit()

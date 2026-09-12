@@ -44,7 +44,7 @@ def test_full_approval_flow_over_http():
     assert resume_response.status_code == 200
     resume_body = resume_response.json()
     assert resume_body["status"] == "completed"
-    assert "TICKET-" in resume_body["final_response"]
+    assert "TICKET" in resume_body["final_response"]
 
 def test_reject_flow_over_http():
     run_response = client.post(

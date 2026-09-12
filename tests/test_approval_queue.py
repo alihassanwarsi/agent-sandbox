@@ -11,6 +11,7 @@ def make_sample_request(queue: ApprovalQueue):
         risk_level=RiskLevel.HIGH,
         role=UserRole.OPERATOR,
         reasoning="User reported a critical outage.",
+        thread_id="test-thread",
     )
 
 def test_submit_creates_a_pending_request():

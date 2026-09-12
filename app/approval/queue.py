@@ -10,7 +10,7 @@ class ApprovalQueue:
     def __init__(self):
         self._requests: dict[str, ApprovalRequest] = {}
 
-    def submit(self, tool_name: str, tool_input: dict, risk_level: RiskLevel, role: UserRole, reasoning: str) -> ApprovalRequest:
+    def submit(self, tool_name: str, tool_input: dict, risk_level: RiskLevel, role: UserRole, reasoning: str, thread_id: str) -> ApprovalRequest:
         """Add a new pending request to the queue and return it."""
 
         request = ApprovalRequest(
@@ -20,6 +20,7 @@ class ApprovalQueue:
             risk_level=risk_level,
             role=role,
             reasoning=reasoning,
+            thread_id=thread_id,
         )
         self._requests[request.id] = request
         return request

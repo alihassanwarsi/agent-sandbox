@@ -15,6 +15,7 @@ def make_sample_request(queue):
         risk_level=TOOL_RISK_LEVELS["create_ticket"],
         role=UserRole.OPERATOR,
         reasoning="",
+        thread_id="test-thread",
     )
 
 def test_approval_wait_submits_to_queue_and_pauses():
@@ -23,7 +24,7 @@ def test_approval_wait_submits_to_queue_and_pauses():
     state = state.model_copy(update={"selected_tool": "create_ticket", "tool_input": {"title": "x", "description": "y"}})
 
     def approval_wait_node(state: AgentState) -> dict:
-        return approval_wait(state, queue).model_dump()
+        return approval_wait(state, queue, "test-thread").model_dump()
 
     graph = StateGraph(AgentState)
     graph.add_node("approval_wait", approval_wait_node)
